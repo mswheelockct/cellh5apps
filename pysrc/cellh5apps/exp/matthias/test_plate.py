@@ -1,3 +1,10 @@
+import numpy
+import vigra
+import pylab
+
+from cellh5apps.outlier.learner import OneClassMahalanobis
+from cellh5apps.outlier import OutlierDetection
+
 EXP = {'matthias_od':
         {
         'mapping_files' : {
@@ -250,3 +257,5 @@ class MatthiasOutlierFigure1(MatthiasOutlier):
     
 if __name__ == "__main__":
     print __file__
+    MatthiasOutlierFigure1('matthias_figure_1', **EXP['matthias_figure_1'])
+    print "*** fini ***"

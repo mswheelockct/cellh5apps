@@ -1,5 +1,6 @@
 import numpy
-from cellh5apps.outlier import OutlierDetection, PCA, OneClassSVM
+from cellh5apps.outlier import OutlierDetection, PCA
+from cellh5apps.outlier.learner import OneClassSVM
 
 EXP = {'matthias_predrug_a6':
         {

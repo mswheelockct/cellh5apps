@@ -1,5 +1,13 @@
 import numpy
 import vigra
+import scipy
+
+from sklearn.svm import OneClassSVM
+from sklearn.feature_selection import RFE
+from sklearn.decomposition import PCA, KernelPCA
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, accuracy_score, roc_curve, auc
+from sklearn.metrics.metrics import roc_curve
+from sklearn.covariance import EmpiricalCovariance, MinCovDet
 
 class OneClassRandomForest(object):
     def __init__(self, outlier_over_sampling_factor=4, *args, **kwargs):

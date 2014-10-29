@@ -1,3 +1,12 @@
+import numpy
+import vigra
+import os
+
+DEBUG = True
+
+from cellh5apps.outlier import OutlierDetection
+from cellh5apps.outlier.learner import PCA, OneClassSVM
+
 EXP = {'sara_od':
         {
         'mapping_files' : {
@@ -22,12 +31,12 @@ EXP = {'sara_od':
             'SP_2': 'F:/sara_adhesion_screen/sp2__all_positions_with_data_combined.ch5',
             'SP_1': 'F:/sara_adhesion_screen/sp1__all_positions_with_data_combined.ch5',
         },
-        'locations' : (
-            ("F",  19), ("B", 8), ("H", 9), ("D", 8),
-            ("H", 6), ("H", 7), ("G", 6), ("G", 7),
-            ("H",12), ("H",13), ("G",12), ("G",13),
-            ),
-        'rows' : list("ABCDEFGHIJKLMNOP")[:],
+#         'locations' : (
+#             ("F",  19), ("B", 8), ("H", 9), ("D", 8),
+#             ("H", 6), ("H", 7), ("G", 6), ("G", 7),
+#             ("H",12), ("H",13), ("G",12), ("G",13),
+#             ),
+        'rows' : list("AB")[:],
         'cols' : tuple(range(19,25)),
         'training_sites' : (5,6,7,8),
         'training_sites' : (1,2,3,4),
@@ -137,3 +146,5 @@ class SaraOutlier(object):
         
 if __name__ == "__main__":
     print __file__
+    SaraOutlier('sara_od', **EXP['sara_od'])
+    print "*** fini ***"
