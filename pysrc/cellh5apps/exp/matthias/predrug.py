@@ -1,6 +1,5 @@
-from cellh5apps.outlier import *
 import numpy
-
+from cellh5apps.outlier import OutlierDetection, PCA, OneClassSVM
 
 EXP = {'matthias_predrug_a6':
         {
@@ -41,8 +40,6 @@ EXP = {'matthias_predrug_a6':
         'kernel' :'rbf'
         }
        }
-
-
 
 class MatthiasPredrug(object):
     def __init__(self, name, mapping_files, ch5_files, rows=None, cols=None, locations=None, training_sites=None, gamma=None, nu=None, pca_dims=None, kernel=None):

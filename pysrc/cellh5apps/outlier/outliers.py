@@ -30,7 +30,7 @@ import datetime
 import os
 from itertools import chain
 
-import iscatter
+from cellh5apps import iscatter
 from cellh5 import CH5File
 from collections import defaultdict, OrderedDict
 from matplotlib.colors import rgb2hex
@@ -39,29 +39,7 @@ from matplotlib import rcParams , RcParams
 
 import matplotlib
 YlBlCMap = matplotlib.colors.LinearSegmentedColormap.from_list('asdf', [(0,0,1), (1,1,0)])
-# rcParams['font.family'] = 'sans-serif'
-# rcParams['font.sans-serif'] = ['Arial']
-# rcParams['pdf.fonttype'] = 42
-# rcParams['ps.usedistiller' ] = 'xpdf'
-# rcParams['font.family'] = 'sans-serif'
-# rcParams['font.size'] = 20
-# rcParams['font.sans-serif'] = ['Arial']
-# rcParams['xtick.labelsize'] = 16 
-# rcParams['ytick.labelsize'] = 16 
-# rcParams['axes.labelsize'] = 16
-# rcParams['lines.color'] = 'white'
-# rcParams['patch.edgecolor'] = 'white'
-# rcParams['text.color'] = 'white'
-# rcParams['axes.facecolor'] = 'black'
-# rcParams['axes.edgecolor'] = 'white'
-# rcParams['axes.labelcolor'] = 'white'
-# rcParams['xtick.color'] = 'white'
-# rcParams['ytick.color'] = 'white'
-# rcParams['grid.color'] = 'white'
-# rcParams['figure.facecolor'] = 'black'
-# rcParams['figure.edgecolor'] = 'black'
-# rcParams['savefig.facecolor'] = 'black'
-# rcParams['savefig.edgecolor'] = 'none'
+
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
