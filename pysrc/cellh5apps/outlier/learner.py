@@ -8,6 +8,7 @@ from sklearn.decomposition import PCA, KernelPCA
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, accuracy_score, roc_curve, auc
 from sklearn.metrics.metrics import roc_curve
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
+from sklearn.mixture import GMM
 
 class OneClassRandomForest(object):
     def __init__(self, outlier_over_sampling_factor=4, *args, **kwargs):
@@ -122,6 +123,22 @@ class OneClassMahalanobis(object):
         thres = scipy.stats.chi2.ppf(0.95, d)
         
         return (mahal_emp_cov > thres).astype(numpy.int32)*-2+1
+    
+    def decision_function(self, data):
+        return numpy.ones((data.shape[0],1))
+    
+class OneClassGMM(object):
+    def __init__(self, *args, **kwargs):
+        pass
+    
+    def fit(self, data):
+        #self.cov = MinCovDet().fit(data)
+        self.gmm = GMM(2)
+        self.gmm.fit(data)
+    
+    def predict(self, data):
+        score = self.gmm.score(data)
+        return (score < numpy.percentile(score, 50)).astype(numpy.int32)*-2+1
     
     def decision_function(self, data):
         return numpy.ones((data.shape[0],1))

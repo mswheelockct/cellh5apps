@@ -3,6 +3,7 @@ import numpy
 import vigra
 import pylab
 import scipy
+import h5py
 
 import sys; sys.path.append('C:/Users/sommerc/cellh5/pysrc/')
 
@@ -109,6 +110,8 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
                 log_file_handle.write("\t0 / 0 outliers\t0.00\n")
             else:
                 if self.feature_set == 'Object features':
+                    if self.fs is not None:
+                        tm = tm[:, self.fs]
                     tm = self._remove_nan_rows(tm)
                 pred, dist = self.predict_with_classifier(tm[:, self.rfe_selection], log_file_handle)
                 predictions[idx] = pred
@@ -205,11 +208,20 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
                 self.rfe_selection = rfe.support_
                 self.classifier = rfe.estimator_
         else:
-            max_training_samples = 10000
-            idx = range(training_matrix.shape[0])
-            numpy.random.seed(1)
-            numpy.random.shuffle(idx)
-            self.classifier.fit(training_matrix[idx[:min(max_training_samples, training_matrix.shape[0])],:])
+            max_training_samples = 200000
+            if training_matrix.shape[0] > max_training_samples:
+                idx = range(training_matrix.shape[0])
+                numpy.random.seed(1)
+                numpy.random.shuffle(idx)
+                idx = idx[:max_training_samples]
+                training_matrix = training_matrix[idx, :]
+            hh = h5py.File(self.output("tmp.ht"), 'w')
+            hh.create_dataset("tm", data=training_matrix)
+            hh.close()
+            print "saved training matrix", training_matrix.shape
+            xxx = training_matrix.copy()
+            self.classifier.fit(xxx)
+            print 'after fit'
             self.rfe_selection = numpy.ones((training_matrix.shape[1],), dtype=numpy.bool)
             
     def compute_outlyingness(self):
@@ -525,74 +537,37 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
             class_count /= class_count.sum()
             fh.write(("%s\t%s\t%s\t%s\t%f\t%d" + "\t%f"*n_classes + "\n") % ((plate_name, well, gene, sirna, float(outlyingness), obj_count, ) + tuple([class_count[kk] for kk in range(n_classes)])))   
 
-        fh.close()
-            
-            
-
-    def evaluate_outlier_detection(self):
+        fh.close()     
+        
+    def get_sl_od_confusion_matrix(self):
         # gather information
         plate_name = str(self.mapping["Plate"].iloc[0])
         c5f = self.cellh5_handles[plate_name]
         class_names = c5f.class_definition('primary__primary')['name']
            
-        acc = []
-        
-        cm = numpy.zeros((len(class_names),2), 'float32')
-        cm_2 = numpy.zeros((2,2), 'float32')
-        cm_3 = numpy.zeros((len(class_names),5), 'float32')
-        
-        for i, each_row in self.mapping.iterrows():
+        cm = numpy.zeros((len(class_names), 2), 'float32')
+        for _, each_row in self.mapping.iterrows():
             plate_name = each_row['Plate']
             well = each_row['Well']
             site = each_row['Site']
             if each_row['Object count'] == 0:
-                print "\tOmmiting (count ==0)", plate_name, well, site
                 continue
-            treatment = tuple(each_row[['Gene Symbol', 'siRNA ID']]) 
+
             outlier_prediction = numpy.array(each_row['Predictions'])
-            
-            cluster_prediction = numpy.array(each_row['Outlier clustering'])
-            
-            outlier_prediction_b = outlier_prediction == -1
             outlier_prediction_2 = ((outlier_prediction*-1)+1)/2
-            
             cellh5_idx = list(each_row['CellH5 object index'])
             c5f = self.cellh5_handles[plate_name]
             c5p = c5f.get_position(well, str(site))
             class_prediction = c5p.get_class_prediction()['label_idx'][cellh5_idx]
-            class_prediction_b = class_prediction > 1
             
-            for c, o, cl in zip(class_prediction, outlier_prediction_2, cluster_prediction):
-                cm[int(c), int(o)]     += 1
-                cm_2[int(c>1), int(o)] += 1
-                cm_3[int(c), int(cl)] += 1
+            for c, o in zip(class_prediction, outlier_prediction_2):
+                cm[int(c), int(o)] += 1
                 
-                
-            acc.append(accuracy_score(class_prediction_b.astype('uint8'), outlier_prediction_b.astype('uint8')))
-        
+        cm_n = cm.copy()
         for r in range(cm.shape[0]):
-            cm[r,:] = cm[r,:] / float(cm[r,:].sum()) 
+            cm_n[r,:] = cm_n[r,:] / float(cm_n[r,:].sum()) 
         
-        for r in range(cm_2.shape[0]):
-            cm_2[r,:] = cm_2[r,:] / float(cm_2[r,:].sum())
-             
-        for r in range(cm_3.shape[0]):
-            cm_3[r,:] = cm_3[r,:] / float(cm_3[r,:].sum()) 
-        
-        print cm
-        print cm_2
-        print cm_3
-        
-#         self.plot_confusion(cm, ['Interphase', 'Prometaphase', 'Metaphase', 'Anaphase', 'Grape', 'Prometaphase\narrest', 'Polylobed'], ['Inlier', 'Outlier'], 'vs_classi_full', 4, print_values=True)
-#         self.plot_confusion(cm_2, ['Wildtype', 'Phenotype'], ['Inlier', 'Outlier'], 'vs_classi_collapsed', print_values=True)
-#         self.plot_confusion(cm_3, ['Interphase', 'Prometaphase', 'Metaphase', 'Anaphase', 'Grape', 'Prometaphase\narrest', 'Polylobed'], ['Inlier']+['Cluster %d' % d for d in range(1,cm_3.shape[1]+1) ], 'vs_class', 4, print_values=True)
-#         
-        self.plot_confusion(cm, class_names, ['Inlier', 'Outlier'], 'vs_classi_full', 2, print_values=True)
-        self.plot_confusion(cm_2, ['Wildtype', 'Phenotype'], ['Inlier', 'Outlier'], 'vs_classi_collapsed', print_values=True)
-        self.plot_confusion(cm_3, class_names, ['Inlier']+['Cluster %d' % d for d in range(1,cm_3.shape[1]+1) ], 'vs_class', 5, print_values=True)
-        
-        
-        return numpy.mean(acc), cm, cm_2, cm_3
+        return cm, cm_n
             
     def plot_confusion(self, cm, row_names, col_names, title='', row_sep=1, col_sep=1, print_values=False, lw=3):
         #rcParamsBackup = rcParams.copy()
@@ -1377,7 +1352,58 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
                         print 'Exporting gallery matrix image for', info, object_
 
                 
+class OutlierFeatureSelection(object):
+    def __init__(self, outlier_detection):
+        self.outlier_detection = outlier_detection
+        self.active_set = []
+        self.active_set_score = []
+        self.training_matrix = self.outlier_detection.get_data(("neg",), "Object features")
+        self.training_matrix = self.outlier_detection.normalize_training_data(self.training_matrix)
 
+        
+    def _evaluate_fs(self):
+        mapping = self.outlier_detection.mapping
+        
+        neg_out = mapping[(mapping['Object count'] > 10) & (mapping['Group'] == 'neg')]['Outlyingness']
+        pos_out = mapping[(mapping['Object count'] > 10) & (mapping['Group'] == 'pos')]['Outlyingness']
+        
+        return 1-3*(neg_out.std() + pos_out.std()) / (numpy.abs(neg_out.mean()-pos_out.mean())) 
+        
+        
+        
+        
+    def zfactor_fs_rank(self, stop_after):
+        result = {}
+        for f_idx in range(self.training_matrix.shape[1]):
+            if f_idx not in self.active_set:
+                current_features = sorted(self.active_set + [f_idx])
+                self.outlier_detection.set_gamma(0.01)
+                
+                current_matrix = self.training_matrix[:, current_features]
+                self.outlier_detection.train_classifier(current_matrix)
+                self.outlier_detection.predict()
+                self.outlier_detection.compute_outlyingness()
+                
+                result[f_idx] = self._evaluate_fs()        
+        best_feature_idx = sorted([(v,k) for k,v in result.items()])[-1][1]
+        self.active_set.append(best_feature_idx)
+        self.active_set_score.append(sorted([(v,k) for k,v in result.items()]))
+        if len(self.active_set) < stop_after:
+            self.zfactor_fs_rank(stop_after)
+            
+        
+                
+                
+                
+            
+            
+        
+        
+        
+        
+        
+        
+        
         
 
       
