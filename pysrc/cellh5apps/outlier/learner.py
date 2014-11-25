@@ -8,9 +8,60 @@ from sklearn.decomposition import PCA, KernelPCA
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, accuracy_score, roc_curve, auc
 from sklearn.metrics.metrics import roc_curve
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
+from sklearn.neighbors.kde import KernelDensity
 from sklearn.mixture import GMM
+import svmutil3
+from sklearn.neighbors import NearestNeighbors
 
-class OneClassRandomForest(object):
+import h5py
+
+class BaseClassifier(object):
+    def describe(self):
+        desc = self.__class__.__name__ 
+        if len(self.params) > 0:
+            desc += "_"
+            
+        desc2 = []
+        for p in self.params:
+            v = getattr(self, p)
+            if isinstance(v, float):
+                desc2.append("%s_%7.6f" % (p, v))
+            elif isinstance(v, int):
+                desc2.append("%s_%d" % (p, v))
+            elif isinstance(v, str):
+                desc2.append("%s_%s" % (p, v))
+            
+        return desc + ("--".join(desc2))
+class OneClassSVM_SKL(OneClassSVM, BaseClassifier):
+    params = ['nu', 'gamma']
+
+class OneClassSVM_LIBSVM(BaseClassifier):
+    params = ['nu', 'gamma']
+    def __init__(self, *args, **kwargs):
+        self.kernel = 2
+        self.nu = kwargs['nu']
+        self.gamma = kwargs['gamma']
+        self.svm_type = 2
+    
+    def fit(self, data):
+        tmp = self._ndarray_to_libsvm_dict(data)
+        self.prob = svmutil3.svm_problem([1]*len(data), tmp)
+        self.param = svmutil3.svm_parameter("-s %d -t %d -n %f -g %f" % (self.svm_type, self.kernel, self.nu, self.gamma))
+        
+        self.model = svmutil3.svm_train(self.prob, self.param) 
+    
+    def predict(self, data):
+        p_label, _, p_vals = svmutil3.svm_predict([0]*len(data), self._ndarray_to_libsvm_dict(data), self.model)
+        self.df = numpy.array(p_vals)
+        return numpy.array(p_label)
+    
+    def decision_function(self, data):
+        return self.df[:,0]
+    
+    def _ndarray_to_libsvm_dict(self, data):
+        return [dict([(f, data[s,f]) for f in range(data.shape[1])]) for s in range(data.shape[0])] 
+
+class OneClassRandomForest(BaseClassifier):
     def __init__(self, outlier_over_sampling_factor=4, *args, **kwargs):
         self.outlier_over_sampling_factor = outlier_over_sampling_factor
         self.rf = vigra.learning.RandomForest(100)
@@ -64,7 +115,7 @@ class OneClassRandomForest(object):
         
         print accuracy_score(testing_labels, testing_pred)
 
-class OneClassAngle(object):
+class OneClassAngle(BaseClassifier):
     def __init__(self, *args, **kwargs):
         pass
     
@@ -109,7 +160,8 @@ class OneClassAngle(object):
     def decision_function(self, data):
         return numpy.ones((data.shape[0],1))
 
-class OneClassMahalanobis(object):
+class OneClassMahalanobis(BaseClassifier):
+    params = []
     def __init__(self, *args, **kwargs):
         pass
     
@@ -122,23 +174,77 @@ class OneClassMahalanobis(object):
         d = data.shape[1]
         thres = scipy.stats.chi2.ppf(0.95, d)
         
+        self.mahal_emp_cov = mahal_emp_cov
+        
         return (mahal_emp_cov > thres).astype(numpy.int32)*-2+1
     
     def decision_function(self, data):
-        return numpy.ones((data.shape[0],1))
+        return self.mahal_emp_cov
     
-class OneClassGMM(object):
+class OneClassGMM(BaseClassifier):
+    params = ['k']
     def __init__(self, *args, **kwargs):
-        pass
+        self.k = kwargs['k']
     
-    def fit(self, data):
+    def fit(self, data, **kwargs):
         #self.cov = MinCovDet().fit(data)
-        self.gmm = GMM(2)
+        self.gmm = GMM(self.k)
         self.gmm.fit(data)
+        self.training_score = self.gmm.score(data)
+        self.direct_threshold = numpy.percentile(self.training_score, 10)
     
     def predict(self, data):
         score = self.gmm.score(data)
-        return (score < numpy.percentile(score, 50)).astype(numpy.int32)*-2+1
+        self.score = score
+        return (score < self.direct_threshold).astype(numpy.int32)*-2+1
     
     def decision_function(self, data):
-        return numpy.ones((data.shape[0],1))
+        return self.score
+    
+class OneClassKDE(BaseClassifier):
+    params = ["bandwidth"]
+    def __init__(self, *args, **kwargs):
+        self.bandwidth = kwargs["bandwidth"]
+    
+    def fit(self, data, **kwargs):
+        #self.train_data = data
+        self.kde = KernelDensity(kernel='gaussian', bandwidth=self.bandwidth)
+        self.kde.fit(data)
+        self.training_score = self.kde.score_samples(data)
+        self.direct_thresh = numpy.percentile(self.training_score, 10)
+    
+    def predict(self, data):
+        score = self.kde.score_samples(data)
+        self.score = score
+        return (score < self.direct_thresh).astype(numpy.int32)*-2+1
+    
+    def decision_function(self, data):
+        return self.score
+    
+OneClassSVM = OneClassSVM_LIBSVM
+
+if __name__ == "__main__":
+    import pylab
+    N = 1000
+    D = 2
+    TD = 20
+    x_train = numpy.random.randn(N,TD)
+    x_train[:N/2,:]+=4
+    x_train[:,D:] = numpy.random.rand(N,TD-D) 
+    x_test = numpy.random.rand(1000,TD)
+    x_test[:,0] = x_test[:,0] * (x_train[:,0].max() - x_train[:,0].min()) + x_train[:,0].min() 
+    x_test[:,1] = x_test[:,1] * (x_train[:,1].max() - x_train[:,1].min()) + x_train[:,1].min() 
+    
+    #a = OneClassSVM_LIBSVM(gamma=0.02, nu=0.1, bandwidth=1, k=5)
+    a = OneClassKDE(gamma=0.02, nu=0.1, bandwidth=1.56, k=5)
+    a.fit(x_train)
+    p = a.predict(x_test)
+    
+    plot_dim = (0,1)
+    
+    pylab.plot(x_train[:, plot_dim[0]], x_train[:,plot_dim[1]], 'g.')
+    pylab.plot(x_test[:, plot_dim[0]], x_test[:,plot_dim[1]], 'bx')
+    pylab.plot(x_test[p==-1, plot_dim[0]], x_test[p==-1,plot_dim[1]], 'ro', markerfacecolor="none", markeredgecolor='r')
+    
+    pylab.show()
+    

@@ -4,8 +4,7 @@ import vigra
 import pylab
 import scipy
 import h5py
-
-import sys; sys.path.append('C:/Users/sommerc/cellh5/pysrc/')
+import time
 
 from sklearn.svm import OneClassSVM
 from sklearn.feature_selection import RFE
@@ -21,24 +20,19 @@ import sklearn.mixture
 
 import cellh5
 import cellh5_analysis
-import cPickle as pickle
-from numpy import recfromcsv
 import pandas
-import time
-from matplotlib.mlab import PCA as PCAold
-from scipy.stats import nanmean
-import datetime
+
 import os
 from itertools import chain
 
 from cellh5apps import iscatter
 from cellh5 import CH5File
 from collections import defaultdict, OrderedDict
-from matplotlib.colors import rgb2hex
 
-from matplotlib import rcParams , RcParams
+from matplotlib import rcParams 
 
-import matplotlib
+from cellh5apps.outlier.learner import OneClassSVM_LIBSVM, OneClassKDE, OneClassMahalanobis, OneClassGMM,\
+    OneClassSVM_SKL
 YlBlCMap = matplotlib.colors.LinearSegmentedColormap.from_list('asdf', [(0,0,1), (1,1,0)])
 
 
@@ -55,8 +49,6 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
         self.nu = nu
         self.pca_dims = pca_dims
         self.kernel = kernel
-        self.feature_set = 'PCA'
-        #self.output_dir += "/-o%s-p%d-k%s-n%f-g%f" % (self.feature_set, self.pca_dims, self.kernel, self.nu, self.gamma)
         try:
             os.makedirs(self.output_dir)
         except:
@@ -70,30 +62,14 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
         self.nu = nu
     def set_pca_dims(self, pca_dims):
         self.pca_dims = pca_dims
-        
-    def write_readme(self):
-        with open(self.output('readme.txt'), 'w') as f:
-            for attr in ('gamma', 'nu', 'pca_dim', 'kernel', 'feature_set'):
-                if hasattr(self, attr):
-                    tmp = getattr(self, attr)
-                    f.write("%s\t%r\n" % (attr, tmp))
 
-    def train(self, train_on=('neg',), classifier_class=OneClassSVM):
-        if DEBUG:
-            print 'Training OneClass Classifier for', train_on, 'on', self.feature_set
-        training_matrix = self.get_data(train_on, self.feature_set)
+    def train(self, train_on=('neg',), classifier_class=OneClassSVM, in_classes=None, feature_set="Object features", **kwargs):
+        training_matrix = self.get_data(train_on, feature_set, in_classes)
+        self.train_classifier(training_matrix, classifier_class, **kwargs)
+
         
-        if self.feature_set == 'Object features' :
-            training_matrix = self.normalize_training_data(training_matrix)
-        
-        self.train_classifier(training_matrix, classifier_class)
-        if DEBUG:
-            pass#print '%04.2f %%' % (100 * float(self.classifier.support_vectors_.shape[0]) / training_matrix.shape[0]), 'support vectors'
-        
-    def predict(self, test_on=('target', 'pos', 'neg')):
-        if DEBUG:
-            print 'Predicting OneClass Classifier for', self.feature_set
-        testing_matrix_list = self.mapping[self.mapping['Group'].isin(test_on)][['Well', 'Site', self.feature_set, "Gene Symbol", "siRNA ID"]].iterrows()
+    def predict(self, test_on=('target', 'pos', 'neg'), feature_set="Object features"):
+        testing_matrix_list = self.mapping[self.mapping['Group'].isin(test_on)][['Well', 'Site', feature_set, "Gene Symbol", "siRNA ID"]].iterrows()
 
         predictions = {}
         distances = {}
@@ -109,11 +85,7 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
                 distances[idx] = numpy.zeros((0, 0))
                 log_file_handle.write("\t0 / 0 outliers\t0.00\n")
             else:
-                if self.feature_set == 'Object features':
-                    if self.fs is not None:
-                        tm = tm[:, self.fs]
-                    tm = self._remove_nan_rows(tm)
-                pred, dist = self.predict_with_classifier(tm[:, self.rfe_selection], log_file_handle)
+                pred, dist = self.predict_with_classifier(tm, log_file_handle)
                 predictions[idx] = pred
                 distances[idx] = dist
         log_file_handle.close()
@@ -121,7 +93,7 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
         self.mapping['Hyperplane distance'] = pandas.Series(distances)
         
     def estimate_gamma_by_sv(self, X, nu):
-        max_training_samples = 10000
+        max_training_samples = 1000
         
         xx = []
         yy = []
@@ -136,7 +108,7 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
             X = X[idx[:min(max_training_samples, X.shape[0])], :]
             
             classifier.fit(X)
-            s_frac = (classifier.support_vectors_.shape[0] / float(len(X)) ) 
+            s_frac = (classifier.support_vectors_.shape[0] / float(len(X))) 
             print " SV fraction ", nu, gamma, "\t\t::", s_frac*100, "%"
             
             if s_frac > 0.99:
@@ -184,45 +156,37 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
         
 
             
-    def train_classifier(self, training_matrix, classifier_class=OneClassSVM):
-        if self.kernel == 'rbf':
-            if self.gamma is None:
-                self.gamma = self.estimate_gamma_by_sv(training_matrix, self.nu)
-        self.classifier = classifier_class(kernel=self.kernel, nu=self.nu, gamma=self.gamma)
-        print '  Using', classifier_class, self.kernel, self.nu, self.gamma
-        if self.kernel == 'linear':
-            max_training_samples = 10000
-            idx = range(training_matrix.shape[0])
-            numpy.random.seed(1)
-            numpy.random.shuffle(idx)
-            self.classifier.fit(training_matrix[idx[:min(max_training_samples, training_matrix.shape[0])],:])
-            self.rfe_selection = numpy.ones((training_matrix.shape[1],), dtype=numpy.bool)
-            
-            # RFE
-            if False:
-                rfe = RFE(self.classifier, 30, step=1)
-                rfe.fit2(training_matrix[idx[:min(max_training_samples, training_matrix.shape[0])],:])
-                if DEBUG:
-                    print rfe.ranking_
-                    print rfe.support_
-                self.rfe_selection = rfe.support_
-                self.classifier = rfe.estimator_
+    def train_classifier(self, training_matrix, classifier_class, **kwargs):
+        if classifier_class in (OneClassSVM, OneClassSVM_LIBSVM):
+            if self.kernel == 'rbf':
+                if self.gamma is None:
+                    self.gamma = self.estimate_gamma_by_sv(training_matrix, self.nu)
+            self.classifier = classifier_class(kernel=kwargs["kernel"], nu=kwargs["nu"], gamma=kwargs["gamma"])
+        elif classifier_class == OneClassKDE:
+            self.classifier = classifier_class(**kwargs)
+        elif classifier_class == OneClassMahalanobis:
+            self.classifier = classifier_class(**kwargs)
+        elif  classifier_class == OneClassGMM:
+            self.classifier = classifier_class(**kwargs)
+        elif   classifier_class == OneClassSVM_SKL:
+            self.classifier = classifier_class(**kwargs)
         else:
-            max_training_samples = 200000
-            if training_matrix.shape[0] > max_training_samples:
-                idx = range(training_matrix.shape[0])
-                numpy.random.seed(1)
-                numpy.random.shuffle(idx)
-                idx = idx[:max_training_samples]
-                training_matrix = training_matrix[idx, :]
-            hh = h5py.File(self.output("tmp.ht"), 'w')
-            hh.create_dataset("tm", data=training_matrix)
-            hh.close()
-            print "saved training matrix", training_matrix.shape
-            xxx = training_matrix.copy()
-            self.classifier.fit(xxx)
-            print 'after fit'
-            self.rfe_selection = numpy.ones((training_matrix.shape[1],), dtype=numpy.bool)
+            raise RuntimeError("classifier unknown")
+            
+       
+        max_training_samples = 3000
+        if training_matrix.shape[0] > max_training_samples:
+            idx = range(training_matrix.shape[0])
+            # numpy.random.seed(42)
+            numpy.random.shuffle(idx)
+            idx = idx[:max_training_samples]
+            training_matrix = training_matrix[idx, :]
+            
+        self.last_training_matrix = training_matrix
+        print 'classification training with', training_matrix.shape, 
+        self.classifier.fit(training_matrix)
+        print 'done'
+
             
     def compute_outlyingness(self):
         def _outlier_count(x):
@@ -234,7 +198,7 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
         
     def predict_with_classifier(self, test_matrix, log_file_handle=None):
         prediction = self.classifier.predict(test_matrix)
-        distance = self.classifier.decision_function(test_matrix)[:,0]
+        distance = self.classifier.decision_function(test_matrix)
         log = "\t%d / %d outliers\t%3.2f" % ((prediction == -1).sum(),
                                              len(prediction),
                                              (prediction == -1).sum() / float(len(prediction)))
@@ -539,35 +503,19 @@ class OutlierDetection(cellh5_analysis.CellH5Analysis):
 
         fh.close()     
         
-    def get_sl_od_confusion_matrix(self):
-        # gather information
-        plate_name = str(self.mapping["Plate"].iloc[0])
-        c5f = self.cellh5_handles[plate_name]
-        class_names = c5f.class_definition('primary__primary')['name']
-           
-        cm = numpy.zeros((len(class_names), 2), 'float32')
-        for _, each_row in self.mapping.iterrows():
-            plate_name = each_row['Plate']
-            well = each_row['Well']
-            site = each_row['Site']
-            if each_row['Object count'] == 0:
-                continue
-
-            outlier_prediction = numpy.array(each_row['Predictions'])
-            outlier_prediction_2 = ((outlier_prediction*-1)+1)/2
-            cellh5_idx = list(each_row['CellH5 object index'])
-            c5f = self.cellh5_handles[plate_name]
-            c5p = c5f.get_position(well, str(site))
-            class_prediction = c5p.get_class_prediction()['label_idx'][cellh5_idx]
-            
-            for c, o in zip(class_prediction, outlier_prediction_2):
-                cm[int(c), int(o)] += 1
-                
-        cm_n = cm.copy()
-        for r in range(cm.shape[0]):
-            cm_n[r,:] = cm_n[r,:] / float(cm_n[r,:].sum()) 
+    def get_sl_od_confusion_matrix(self, type_='dist'):
+        sl = numpy.concatenate(list(self.mapping[self.mapping['Object count'] >0]['Object classification label']))
+        od = numpy.concatenate(list(self.mapping[self.mapping['Object count'] >0]['Predictions']))
+        ods = numpy.concatenate(list(self.mapping[self.mapping['Object count'] >0]['Hyperplane distance']))
         
-        return cm, cm_n
+        cm = confusion_matrix(sl, od==-1)[:,:2].astype(numpy.float32)
+        steps = 20
+        thresholds = numpy.linspace(ods.min(), ods.max(), steps)
+        
+        cms = [confusion_matrix(sl, ods < d)[:,:2] for d in thresholds]
+        
+        return cm, cms, thresholds
+        
             
     def plot_confusion(self, cm, row_names, col_names, title='', row_sep=1, col_sep=1, print_values=False, lw=3):
         #rcParamsBackup = rcParams.copy()

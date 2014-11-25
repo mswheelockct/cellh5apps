@@ -2,9 +2,8 @@ import numpy
 import vigra
 import pylab
 
-from cellh5apps.outlier.learner import OneClassMahalanobis, OneClassAngle, OneClassGMM
+from cellh5apps.outlier.learner import OneClassMahalanobis, OneClassAngle, OneClassGMM, OneClassSVM
 from cellh5apps.outlier import OutlierDetection, OutlierFeatureSelection
-from sklearn.svm.classes import OneClassSVM
 
 from matplotlib import pyplot as plt 
 from cellh5apps.utils.colormaps import YlBlCMap
@@ -186,11 +185,11 @@ class MatthiasOutlierFigure1(MatthiasOutlier):
             self.od.set_pca_dims(-1)
             
             for gamma in [0.1,0.01, 0.001, 0.0001, 0.00001, 0.000001]:
-                for nu in [0.01, 0.05, 0.1, 0.2, 0.5, 0.99]:
-                    for classifier in [OneClassGMM, ]:
+                for nu in [0.0001, 0.01, 0.05, 0.1, 0.2, 0.5, 0.99]:
+                    for classifier in [OneClassSVM, ]:
                         self.od.set_gamma(gamma)
                         self.od.set_nu(nu)
-                        self.od.train(classifier_class=classifier)
+                        self.od.train(classifier_class=classifier, kernel='rbf', nu=nu, gamma=gamma)
                         self.od.predict()
                         self.od.compute_outlyingness()
                         cm = self.od.get_sl_od_confusion_matrix()[0] 
@@ -203,13 +202,13 @@ class MatthiasOutlierFigure1(MatthiasOutlier):
             for gamma in [0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]:
                 for nu in [0.01, 0.05, 0.1, 0.2, 0.5, 0.99]:
                     for pca_dims in [50]:
-                        for classifier in [OneClassGMM,]:
+                        for classifier in [OneClassSVM,]:
                             self.od.set_gamma(gamma)
                             self.od.set_nu(nu)
                             self.od.set_pca_dims(pca_dims)
                             self.od.train_pca()
                             self.od.predict_pca()
-                            self.od.train(classifier_class=classifier)
+                            self.od.train(classifier_class=classifier, kernel='rbf', nu=nu, gamma=gamma)
                             self.od.predict()
                             self.od.compute_outlyingness()
                             cm = self.od.get_sl_od_confusion_matrix()[0] 
