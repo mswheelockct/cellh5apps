@@ -1,1 +1,1 @@
-from outliers import OutlierDetection, OutlierFeatureSelection
+from outliers import *

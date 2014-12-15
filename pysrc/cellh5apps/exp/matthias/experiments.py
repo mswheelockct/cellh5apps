@@ -11,7 +11,7 @@ EXP = {'matthias_predrug_a6':
             'Screen_Plate_08': 'F:/matthias_predrug_a6/Screen_Plate_08_position_map_PRE.txt',
             'Screen_Plate_09': 'F:/matthias_predrug_a6/Screen_Plate_09_position_map_PRE.txt',
             },
-        'ch5_files' : {
+        'cellh5_files' : {
             'Screen_Plate_01': 'F:/matthias_predrug_a6/Screen_Plate_01_all_positions_with_data.ch5',
             'Screen_Plate_02': 'F:/matthias_predrug_a6/Screen_Plate_02_all_positions_with_data.ch5',
             'Screen_Plate_03': 'F:/matthias_predrug_a6/Screen_Plate_03_all_positions_with_data.ch5',
@@ -38,7 +38,7 @@ EXP = {'matthias_predrug_a6':
         'mapping_files' : {
             'Screen_Plate_09': 'F:/matthias_predrug_a6/Screen_Plate_09_position_map_PRE.txt',
             },
-        'ch5_files' : {
+        'cellh5_files' : {
 
             'Screen_Plate_09': 'F:/matthias_predrug_a6/Screen_Plate_09_all_positions_with_data.ch5',
             },

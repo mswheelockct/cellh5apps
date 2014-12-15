@@ -2,51 +2,10 @@ import numpy
 import vigra
 import os
 
-DEBUG = True
+from cellh5apps.outlier import OutlierDetection, OutlierDetectionSingleCellPlots
+from cellh5apps.outlier.learner import PCA, OneClassSVM, OneClassSVM_SKL
 
-from cellh5apps.outlier import OutlierDetection
-from cellh5apps.outlier.learner import PCA, OneClassSVM
-
-EXP = {'sara_od':
-        {
-        'mapping_files' : {
-            'SP_9': 'F:/sara_adhesion_screen/sp9.txt',
-            'SP_8': 'F:/sara_adhesion_screen/sp8.txt',
-            'SP_7': 'F:/sara_adhesion_screen/sp7.txt',
-            'SP_6': 'F:/sara_adhesion_screen/sp6.txt',
-            'SP_5': 'F:/sara_adhesion_screen/sp5.txt',
-            'SP_4': 'F:/sara_adhesion_screen/sp4.txt',
-            'SP_3': 'F:/sara_adhesion_screen/sp3.txt',
-            'SP_2': 'F:/sara_adhesion_screen/sp2.txt',
-            'SP_1': 'F:/sara_adhesion_screen/sp1.txt',
-        },
-        'ch5_files' : {
-            'SP_9': 'F:/sara_adhesion_screen/sp9__all_positions_with_data_combined.ch5',
-            'SP_8': 'F:/sara_adhesion_screen/sp8__all_positions_with_data_combined.ch5',
-            'SP_7': 'F:/sara_adhesion_screen/sp7__all_positions_with_data_combined.ch5',
-            'SP_6': 'F:/sara_adhesion_screen/sp6__all_positions_with_data_combined.ch5',
-            'SP_5': 'F:/sara_adhesion_screen/sp5__all_positions_with_data_combined.ch5',
-            'SP_4': 'F:/sara_adhesion_screen/sp4__all_positions_with_data_combined.ch5',
-            'SP_3': 'F:/sara_adhesion_screen/sp3__all_positions_with_data_combined.ch5',
-            'SP_2': 'F:/sara_adhesion_screen/sp2__all_positions_with_data_combined.ch5',
-            'SP_1': 'F:/sara_adhesion_screen/sp1__all_positions_with_data_combined.ch5',
-        },
-#         'locations' : (
-#             ("F",  19), ("B", 8), ("H", 9), ("D", 8),
-#             ("H", 6), ("H", 7), ("G", 6), ("G", 7),
-#             ("H",12), ("H",13), ("G",12), ("G",13),
-#             ),
-        'rows' : list("AB")[:],
-        'cols' : tuple(range(19,25)),
-        'training_sites' : (5,6,7,8),
-        'training_sites' : (1,2,3,4),
-        'gamma' : 0.005,
-        'nu' : 0.15,
-        'pca_dims' : 50,
-        'kernel' :'rbf'
-        },
-       }
-
+from cellh5apps.exp import EXP
 
 
 class SaraOutlier(object):
@@ -83,8 +42,6 @@ class SaraOutlier(object):
         except:
             print "@!#$!"*100
             idx = numpy.zeros((len(pp),), dtype=numpy.bool)
-        if DEBUG:
-            print "  %s_%s" % (pos.well, pos.pos), "%d/%d" % (idx.sum(), len(idx)),  'are live mitotic'
         
         # Export images for live mitotic cells
         if False:
@@ -144,7 +101,28 @@ class SaraOutlier(object):
             print 'Results:', self.od.output_dir
         os.startfile(os.path.join(os.getcwd(), self.od.output_dir))
         
-if __name__ == "__main__":
-    print __file__
-    SaraOutlier('sara_od', **EXP['sara_od'])
-    print "*** fini ***"
+# if __name__ == "__main__":
+#     print __file__
+#     SaraOutlier('sara_od', **EXP['sara_od'])
+#     print "*** fini ***"
+
+if __name__ == "__main__":    
+    od = OutlierDetection("sara_new", **EXP['sara_screen_plate_9'])
+    od.set_max_training_sample_size(6000)
+    od.read_feature(remove_feature=(18, 62, 92, 122, 152), idx_selector_functor=SaraOutlier.sara_mitotic_live_selector)
+    
+    od_plots = OutlierDetectionSingleCellPlots(od)
+    
+    def func(nu, gamma):
+        feature_set="Object features"
+        od.train(classifier_class=OneClassSVM_SKL, gamma=gamma, nu=nu, kernel="rbf", feature_set="Object features")
+        od.predict(feature_set=feature_set)
+        od.compute_outlyingness()
+        od_plots.evaluate(2)
+        
+    od_plots.grid_search(func, nu=[0.1,0.14, 0.2], gamma=[2**-k for k in range(2,14)])
+#     od_plots.grid_search(func, nu=[(kk / 100.0) for kk in range(8,16)], gamma=[(kk / 1000.0) for kk in range(1,22,2)])
+    
+    
+    
+    

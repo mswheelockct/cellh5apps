@@ -1,83 +1,27 @@
 import numpy
-from cellh5apps.outlier import OutlierDetection, PCA
-from cellh5apps.outlier.learner import OneClassSVM
+from cellh5apps.outlier import OutlierDetection, OutlierDetectionSingleCellPlots, OutlierClusterPlots
+from cellh5apps.outlier.learner import OneClassSVM, OneClassSVM_SKL, ClusterGMM
+from cellh5apps.exp import EXP
 
-EXP = {'matthias_predrug_a6':
-        {
-        'mapping_files' : {
-            'Screen_Plate_01': 'F:/matthias_predrug_a6/Screen_Plate_01_position_map_PRE.txt',
-            'Screen_Plate_02': 'F:/matthias_predrug_a6/Screen_Plate_02_position_map_PRE.txt',
-            'Screen_Plate_03': 'F:/matthias_predrug_a6/Screen_Plate_03_position_map_PRE.txt',
-            'Screen_Plate_04': 'F:/matthias_predrug_a6/Screen_Plate_04_position_map_PRE.txt',
-            'Screen_Plate_05': 'F:/matthias_predrug_a6/Screen_Plate_05_position_map_PRE.txt',
-            'Screen_Plate_06': 'F:/matthias_predrug_a6/Screen_Plate_06_position_map_PRE.txt',
-            'Screen_Plate_07': 'F:/matthias_predrug_a6/Screen_Plate_07_position_map_PRE.txt',
-            'Screen_Plate_08': 'F:/matthias_predrug_a6/Screen_Plate_08_position_map_PRE.txt',
-            'Screen_Plate_09': 'F:/matthias_predrug_a6/Screen_Plate_09_position_map_PRE.txt',
-            },
-        'ch5_files' : {
-            'Screen_Plate_01': 'F:/matthias_predrug_a6/Screen_Plate_01_all_positions_with_data.ch5',
-            'Screen_Plate_02': 'F:/matthias_predrug_a6/Screen_Plate_02_all_positions_with_data.ch5',
-            'Screen_Plate_03': 'F:/matthias_predrug_a6/Screen_Plate_03_all_positions_with_data.ch5',
-            'Screen_Plate_04': 'F:/matthias_predrug_a6/Screen_Plate_04_all_positions_with_data.ch5',
-            'Screen_Plate_05': 'F:/matthias_predrug_a6/Screen_Plate_05_all_positions_with_data.ch5',
-            'Screen_Plate_06': 'F:/matthias_predrug_a6/Screen_Plate_06_all_positions_with_data.ch5',
-            'Screen_Plate_07': 'F:/matthias_predrug_a6/Screen_Plate_07_all_positions_with_data.ch5',
-            'Screen_Plate_08': 'F:/matthias_predrug_a6/Screen_Plate_08_all_positions_with_data.ch5',
-            'Screen_Plate_09': 'F:/matthias_predrug_a6/Screen_Plate_09_all_positions_with_data.ch5',
-            },
-        'locations' : (
-            ("A",  4), ("B", 23), ("H", 9), ("D", 8),
-            ("H", 6), ("A", 7), ("G", 6), ("G", 7),
-            ("H",12), ("H",13), ("G",12), ("A", 9),
-            ),
-        'rows' : list("A")[:],
-        'cols' : tuple(range(4,5)),
-        'training_sites' : (5,6,7,8),
-        'training_sites' : (1,2,3,4),
-        'gamma' : 0.001,
-        'nu' : 0.2,
-        'pca_dims' : 50,
-        'kernel' :'rbf'
-        }
-       }
-
-class MatthiasPredrug(object):
-    def __init__(self, name, mapping_files, ch5_files, rows=None, cols=None, locations=None, training_sites=None, gamma=None, nu=None, pca_dims=None, kernel=None):
-        self.od = OutlierDetection(name,
-                                  mapping_files,
-                                  ch5_files,
-                                  rows=rows,
-                                  cols=cols,
-                                  locations=locations,
-                                  gamma=gamma,
-                                  nu=nu,
-                                  pca_dims=pca_dims,
-                                  kernel=kernel,
-                                  training_sites=training_sites
-                                  )
-        self.od.set_read_feature_time_predicate(numpy.equal, 0)
-        self.od.read_feature(object_="primary__primary")
-        self.od.set_gamma(gamma)
-        self.od.set_nu(nu)
-        self.od.set_pca_dims(pca_dims)
-        self.od.set_kernel(kernel)
-        self.od.train_pca(pca_type=PCA)
-        self.od.predict_pca()
-        self.od.train(classifier_class=OneClassSVM)
-        self.od.predict()
-        self.od.compute_outlyingness()
-        #self.od.export_to_file(6)
-        self.od.cluster_outliers()
-        print self.od.evaluate_outlier_detection()
-        #self.od.make_top_hit_list(top=4000, for_group=('neg', 'target', 'pos'))
+if __name__ == "__main__":    
+    od = OutlierDetection("matthias", **EXP['matthias_predrug_a6'])
+    od.set_max_training_sample_size(8000)
+    od.read_feature(remove_feature=(18, 62, 92, 122, 152))
+    
+    od_plots = OutlierDetectionSingleCellPlots(od)
+    
+    def func(nu, gamma):
+        feature_set="Object features"
+        od.train(classifier_class=OneClassSVM_SKL, gamma=gamma, nu=nu, kernel="rbf", feature_set="Object features")
+        od.predict(feature_set=feature_set)
+        od.compute_outlyingness()
+        od_plots.evaluate(2)
         
-        self.od.interactive_plot()
-        
-        self.od.write_readme()
-        
-if __name__ == "__main__":
-    print __file__
-    MatthiasPredrug('mathias_predrug', **EXP['matthias_predrug_a6'])
-    print "*** fini ***"
+#     od_plots.grid_search(func, nu=[0.1, 0.13, 0.15], gamma=[(kk / 1000.0) for kk in range(1,50,4)])
+    od_plots.grid_search(func, nu=[0.13], gamma=[0.035,])
+    od_cluster = OutlierClusterPlots(od)
+    od_cluster.cluster(ClusterGMM, feature_names=('n2_avg', 'n2_stddev', 'roisize',  'eccentricity',  'h4_ASM',  'h8_2COR', 'granu_close_volume_7', 'granu_open_volume_5'), n_components=5, covariance_type="diag")
+    od_cluster.evaluate()
+    od_cluster.export_cluster_representatives((16,8))
+    od_cluster.export_galleries_per_pos()
     

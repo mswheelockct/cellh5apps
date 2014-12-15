@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, a
 from sklearn.metrics.metrics import roc_curve
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from sklearn.neighbors.kde import KernelDensity
-from sklearn.mixture import GMM
+from sklearn.mixture import GMM as GMM_SKL
 import svmutil3
 from sklearn.neighbors import NearestNeighbors
 
@@ -18,11 +18,11 @@ import h5py
 class BaseClassifier(object):
     def describe(self):
         desc = self.__class__.__name__ 
-        if len(self.params) > 0:
+        if len(self._fit_params) > 0:
             desc += "_"
             
         desc2 = []
-        for p in self.params:
+        for p in self._fit_params:
             v = getattr(self, p)
             if isinstance(v, float):
                 desc2.append("%s_%7.6f" % (p, v))
@@ -32,11 +32,13 @@ class BaseClassifier(object):
                 desc2.append("%s_%s" % (p, v))
             
         return desc + ("--".join(desc2))
+    
 class OneClassSVM_SKL(OneClassSVM, BaseClassifier):
-    params = ['nu', 'gamma']
+    _fit_params = ['nu', 'gamma']
+    direct_thresh = 0
 
 class OneClassSVM_LIBSVM(BaseClassifier):
-    params = ['nu', 'gamma']
+    _fit_params = ['nu', 'gamma']
     def __init__(self, *args, **kwargs):
         self.kernel = 2
         self.nu = kwargs['nu']
@@ -161,7 +163,7 @@ class OneClassAngle(BaseClassifier):
         return numpy.ones((data.shape[0],1))
 
 class OneClassMahalanobis(BaseClassifier):
-    params = []
+    _fit_params = []
     def __init__(self, *args, **kwargs):
         pass
     
@@ -182,13 +184,13 @@ class OneClassMahalanobis(BaseClassifier):
         return self.mahal_emp_cov
     
 class OneClassGMM(BaseClassifier):
-    params = ['k']
+    _fit_params = ['k']
     def __init__(self, *args, **kwargs):
         self.k = kwargs['k']
     
     def fit(self, data, **kwargs):
         #self.cov = MinCovDet().fit(data)
-        self.gmm = GMM(self.k)
+        self.gmm = GMM_SKL(self.k)
         self.gmm.fit(data)
         self.training_score = self.gmm.score(data)
         self.direct_threshold = numpy.percentile(self.training_score, 10)
@@ -202,7 +204,7 @@ class OneClassGMM(BaseClassifier):
         return self.score
     
 class OneClassKDE(BaseClassifier):
-    params = ["bandwidth"]
+    _fit_params = ["bandwidth"]
     def __init__(self, *args, **kwargs):
         self.bandwidth = kwargs["bandwidth"]
     
@@ -222,6 +224,28 @@ class OneClassKDE(BaseClassifier):
         return self.score
     
 OneClassSVM = OneClassSVM_LIBSVM
+
+class ClusterGMM(BaseClassifier, GMM_SKL):
+    _fit_params = ["n_components", "covariance_type"]
+    
+    def predict(self, data):
+        self.cluster_prediction = GMM_SKL.predict(self, data)
+        return self.cluster_prediction   
+    
+    def distance(self, data):
+        cluster = self.cluster_prediction
+        distance = numpy.zeros(cluster.shape)
+        try:
+            for kk in range(self.n_components):
+                
+                distance[cluster==kk] = numpy.linalg.norm(data[cluster==kk , :] - self.means_[kk], axis=1)
+        except:
+            print 1
+            
+        return distance
+        
+        
+        
 
 if __name__ == "__main__":
     import pylab

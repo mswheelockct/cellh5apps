@@ -11,7 +11,7 @@ EXP = {'sara_screen':
             'SP_2': 'F:/sara_adhesion_screen/sp2.txt',
             'SP_1': 'F:/sara_adhesion_screen/sp1.txt',
         },
-        'ch5_files' : {
+        'cellh5_files' : {
             'SP_9': 'F:/sara_adhesion_screen/sp9__all_positions_with_data_combined.ch5',
             'SP_8': 'F:/sara_adhesion_screen/sp8__all_positions_with_data_combined.ch5',
             'SP_7': 'F:/sara_adhesion_screen/sp7__all_positions_with_data_combined.ch5',
@@ -27,18 +27,19 @@ EXP = {'sara_screen':
 #             ("H", 6), ("H", 7), ("G", 6), ("G", 7),
 #             ("H",12), ("H",13), ("G",12), ("G",13),
 #             ),
-        'rows' : list("AB")[:],
-        'cols' : tuple(range(19, 25)),
-        'training_sites' : (5, 6, 7, 8),
+#         'rows' : list("AB")[:],
+#         'cols' : tuple(range(19, 25)),
+#         'training_sites' : (5, 6, 7, 8),
         'training_sites' : (1, 2, 3, 4),
 
         },
+       
        'sara_screen_plate_9':
         {
         'mapping_files' : {
             'SP_9': 'F:/sara_adhesion_screen/sp9.txt',
         },
-        'ch5_files' : {
+        'cellh5_files' : {
             'SP_9': 'F:/sara_adhesion_screen/sp9__all_positions_with_data_combined.ch5',
 
         },
