@@ -1,9 +1,11 @@
 import numpy
 import vigra
 import os
+import matplotlib
+matplotlib.use('Qt4Agg')
 
-from cellh5apps.outlier import OutlierDetection, OutlierDetectionSingleCellPlots
-from cellh5apps.outlier.learner import PCA, OneClassSVM, OneClassSVM_SKL
+from cellh5apps.outlier import OutlierDetection, OutlierDetectionSingleCellPlots, OutlierClusterPlots
+from cellh5apps.outlier.learner import PCA, OneClassSVM, OneClassSVM_SKL, ClusterGMM, ClusterKM
 
 from cellh5apps.exp import EXP
 
@@ -106,22 +108,27 @@ class SaraOutlier(object):
 #     SaraOutlier('sara_od', **EXP['sara_od'])
 #     print "*** fini ***"
 
-if __name__ == "__main__":    
-    od = OutlierDetection("sara_new", **EXP['sara_screen_plate_9'])
-    od.set_max_training_sample_size(6000)
-    od.read_feature(remove_feature=(18, 62, 92, 122, 152), idx_selector_functor=SaraOutlier.sara_mitotic_live_selector)
+if __name__ == "__main__":   
+    od = OutlierDetection("sara_p18", **EXP['sara_screen_plates_1_8'])
+    od.set_max_training_sample_size(10000)
+    
+#     od.read_feature(remove_feature=(18, 62, 92, 122, 152), idx_selector_functor=SaraOutlier.sara_mitotic_live_selector).
+    od.read_feature(remove_feature=(16,  17,  18,  62,  92, 122, 137, 138, 152))
+    od.pca_run()
+    feature_set="Object features"
+        
+    od.train(classifier_class=OneClassSVM_SKL, gamma=0.035, nu=0.13, kernel="rbf", feature_set=feature_set)
+    od.predict(feature_set=feature_set)
+    od.compute_outlyingness()
+    
+    od.cluster_run(ClusterGMM, max_samples=10000, covariance_type="full", n_components=2)
     
     od_plots = OutlierDetectionSingleCellPlots(od)
     
-    def func(nu, gamma):
-        feature_set="Object features"
-        od.train(classifier_class=OneClassSVM_SKL, gamma=gamma, nu=nu, kernel="rbf", feature_set="Object features")
-        od.predict(feature_set=feature_set)
-        od.compute_outlyingness()
-        od_plots.evaluate(2)
-        
-    od_plots.grid_search(func, nu=[0.1,0.14, 0.2], gamma=[2**-k for k in range(2,14)])
-#     od_plots.grid_search(func, nu=[(kk / 100.0) for kk in range(8,16)], gamma=[(kk / 1000.0) for kk in range(1,22,2)])
+    od_plots.evaluate(2)    
+    od_plots.evaluate_cluster(2)
+    
+    od_plots.show_feature_space(2,("target",))
     
     
     
