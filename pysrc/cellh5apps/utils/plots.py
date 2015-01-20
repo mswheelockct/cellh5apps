@@ -1,5 +1,5 @@
 from collections import OrderedDict
-
+import numpy
 COLOR_LUT_6 = OrderedDict([
         ("blue"    , "#000087"),
         ("green"   , "#00A600"),
@@ -10,9 +10,14 @@ COLOR_LUT_6 = OrderedDict([
 
 DEBUG = True
   
-def matplotlib_black_background():
+def matplotlib_black_background(seaborn_=True):
+    if seaborn_:
+        import seaborn as sns
+        sns.set_style("white")
+    import matplotlib
     from matplotlib import rcParams
     rcParams['font.family'] = 'sans-serif'
+    rcParams['font.size'] = 24
     rcParams['font.sans-serif'] = ['Arial']
     rcParams['pdf.fonttype'] = 42
     
@@ -30,6 +35,11 @@ def matplotlib_black_background():
     rcParams['figure.edgecolor'] = 'black'
     rcParams['savefig.facecolor'] = 'black'
     rcParams['savefig.edgecolor'] = 'black'
+    
+    matplotlib.rc('xtick', labelsize=16) 
+    matplotlib.rc('ytick', labelsize=16) 
+    matplotlib.rc('axes', labelsize=18)
+    matplotlib.rc('font', size=22)
     
 
 
