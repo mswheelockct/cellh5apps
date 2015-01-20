@@ -10,6 +10,7 @@ from sklearn.metrics.metrics import roc_curve
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from sklearn.neighbors.kde import KernelDensity
 from sklearn.mixture import GMM as GMM_SKL
+from sklearn.cluster import KMeans
 import svmutil3
 from sklearn.neighbors import NearestNeighbors
 
@@ -230,6 +231,24 @@ class ClusterGMM(BaseClassifier, GMM_SKL):
     
     def predict(self, data):
         self.cluster_prediction = GMM_SKL.predict(self, data)
+        return self.cluster_prediction   
+    
+    def distance(self, data):
+        cluster = self.cluster_prediction
+        distance = numpy.zeros(cluster.shape)
+        try:
+            for kk in range(self.n_components):
+                
+                distance[cluster==kk] = numpy.linalg.norm(data[cluster==kk , :] - self.means_[kk], axis=1)
+        except:
+            print 1
+            
+        return distance
+class ClusterKM(BaseClassifier, KMeans):
+    _fit_params = ["n_clusters"]
+    
+    def predict(self, data):
+        self.cluster_prediction = KMeans.predict(self, data)
         return self.cluster_prediction   
     
     def distance(self, data):

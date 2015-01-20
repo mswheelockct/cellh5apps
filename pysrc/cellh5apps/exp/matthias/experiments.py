@@ -33,6 +33,21 @@ EXP = {'matthias_predrug_a6':
         },
        
        
+       'matthias_predrug_a6_plate_9_subset':
+        {
+        'mapping_files' : {
+            'Screen_Plate_09': 'F:/matthias_predrug_a6/Screen_Plate_09_position_map_PRE.txt',
+            },
+        'cellh5_files' : {
+
+            'Screen_Plate_09': 'F:/matthias_predrug_a6/Screen_Plate_09_all_positions_with_data.ch5',
+            },
+        'training_sites' : (1, 2, 3, 4),
+        'rows' : list("ABCDEF")[:5],
+         'cols' : tuple(range(6)),
+        },
+       
+       
        'matthias_predrug_a6_plate_9':
         {
         'mapping_files' : {
@@ -42,6 +57,70 @@ EXP = {'matthias_predrug_a6':
 
             'Screen_Plate_09': 'F:/matthias_predrug_a6/Screen_Plate_09_all_positions_with_data.ch5',
             },
+        'training_sites' : (1, 2, 3, 4),
+        },
+       
+       'matthias_predrug_a6_plates_1_8':
+        {
+        'mapping_files' : {
+            'Screen_Plate_01': 'F:/matthias_predrug_a6/Screen_Plate_01_position_map_PRE.txt',
+            'Screen_Plate_02': 'F:/matthias_predrug_a6/Screen_Plate_02_position_map_PRE.txt',
+            'Screen_Plate_03': 'F:/matthias_predrug_a6/Screen_Plate_03_position_map_PRE.txt',
+            'Screen_Plate_04': 'F:/matthias_predrug_a6/Screen_Plate_04_position_map_PRE.txt',
+            'Screen_Plate_05': 'F:/matthias_predrug_a6/Screen_Plate_05_position_map_PRE.txt',
+            'Screen_Plate_06': 'F:/matthias_predrug_a6/Screen_Plate_06_position_map_PRE.txt',
+            'Screen_Plate_07': 'F:/matthias_predrug_a6/Screen_Plate_07_position_map_PRE.txt',
+            'Screen_Plate_08': 'F:/matthias_predrug_a6/Screen_Plate_08_position_map_PRE.txt',
+            },
+        'cellh5_files' : {
+            'Screen_Plate_01': 'F:/matthias_predrug_a6/Screen_Plate_01_all_positions_with_data.ch5',
+            'Screen_Plate_02': 'F:/matthias_predrug_a6/Screen_Plate_02_all_positions_with_data.ch5',
+            'Screen_Plate_03': 'F:/matthias_predrug_a6/Screen_Plate_03_all_positions_with_data.ch5',
+            'Screen_Plate_04': 'F:/matthias_predrug_a6/Screen_Plate_04_all_positions_with_data.ch5',
+            'Screen_Plate_05': 'F:/matthias_predrug_a6/Screen_Plate_05_all_positions_with_data.ch5',
+            'Screen_Plate_06': 'F:/matthias_predrug_a6/Screen_Plate_06_all_positions_with_data.ch5',
+            'Screen_Plate_07': 'F:/matthias_predrug_a6/Screen_Plate_07_all_positions_with_data.ch5',
+            'Screen_Plate_08': 'F:/matthias_predrug_a6/Screen_Plate_08_all_positions_with_data.ch5',
+            },
+#         'locations' : (
+#             ("A", 4), ("B", 23), ("H", 9), ("D", 8),
+#             ("H", 6), ("A", 7), ("G", 6), ("G", 7),
+#             ("H", 12), ("H", 13), ("G", 12), ("A", 9),
+#             ),
+#         'rows' : list("ABCDE")[:],
+#         'cols' : tuple(range(4, 5)),
+        'training_sites' : (1, 2, 3, 4),
+        },
+       
+       'matthias_predrug_a7_plates_1_8':
+        {
+        'mapping_files' : {
+            'Screen_Plate_01': 'F:/matthias_predrug_a6/Screen_Plate_01_position_map_PRE.txt',
+            'Screen_Plate_02': 'F:/matthias_predrug_a6/Screen_Plate_02_position_map_PRE.txt',
+            'Screen_Plate_03': 'F:/matthias_predrug_a6/Screen_Plate_03_position_map_PRE.txt',
+            'Screen_Plate_04': 'F:/matthias_predrug_a6/Screen_Plate_04_position_map_PRE.txt',
+            'Screen_Plate_05': 'F:/matthias_predrug_a6/Screen_Plate_05_position_map_PRE.txt',
+            'Screen_Plate_06': 'F:/matthias_predrug_a6/Screen_Plate_06_position_map_PRE.txt',
+            'Screen_Plate_07': 'F:/matthias_predrug_a6/Screen_Plate_07_position_map_PRE.txt',
+            'Screen_Plate_08': 'F:/matthias_predrug_a6/Screen_Plate_08_position_map_PRE.txt',
+            },
+        'cellh5_files' : {
+            'Screen_Plate_01': 'F:/matthias_predrug_a7/Screen_Plate_01_all_positions_with_data.ch5',
+            'Screen_Plate_02': 'F:/matthias_predrug_a7/Screen_Plate_02_all_positions_with_data.ch5',
+            'Screen_Plate_03': 'F:/matthias_predrug_a7/Screen_Plate_03_all_positions_with_data.ch5',
+            'Screen_Plate_04': 'F:/matthias_predrug_a7/Screen_Plate_04_all_positions_with_data.ch5',
+            'Screen_Plate_05': 'F:/matthias_predrug_a7/Screen_Plate_05_all_positions_with_data.ch5',
+            'Screen_Plate_06': 'F:/matthias_predrug_a7/Screen_Plate_06_all_positions_with_data.ch5',
+            'Screen_Plate_07': 'F:/matthias_predrug_a7/Screen_Plate_07_all_positions_with_data.ch5',
+            'Screen_Plate_08': 'F:/matthias_predrug_a7/Screen_Plate_08_all_positions_with_data.ch5',
+            },
+#         'locations' : (
+#             ("A", 4), ("B", 23), ("H", 9), ("D", 8),
+#             ("H", 6), ("A", 7), ("G", 6), ("G", 7),
+#             ("H", 12), ("H", 13), ("G", 12), ("A", 9),
+#             ),
+        'rows' : list("ABCDE")[:],
+        'cols' : tuple(range(4, 5,6)),
         'training_sites' : (1, 2, 3, 4),
         },
        

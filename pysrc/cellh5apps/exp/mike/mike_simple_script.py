@@ -48,7 +48,7 @@ if __name__ == "__main__":
     ma.print_tracks("HMM Track Labels")
     
     # show a specific track visually
-    ma.show_track(43)
+    ma.report_to_csv()
     
         
         
